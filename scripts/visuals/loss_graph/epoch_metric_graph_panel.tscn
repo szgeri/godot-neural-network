@@ -1,9 +1,9 @@
 [gd_scene load_steps=5 format=3 uid="uid://cw7fa15xe8eok"]
 
-[ext_resource type="Theme" uid="uid://borx7v1oj4xbe" path="res://assets/themes/loss_graph/loss_graph_dark.tres" id="1_treko"]
-[ext_resource type="Script" uid="uid://dnqehf7mhtl2p" path="res://scripts/visuals/loss_graph/epoch_metric_graph_panel.gd" id="2_o6oof"]
-[ext_resource type="Script" uid="uid://ckslrqyk8o8rk" path="res://scripts/visuals/loss_graph/grid_layer.gd" id="3_0lflx"]
-[ext_resource type="Script" uid="uid://1t0u6ccmqp0s" path="res://scripts/visuals/loss_graph/epoch_metric_graph.gd" id="4_0aj26"]
+[ext_resource type="Theme" path="res://assets/themes/loss_graph/loss_graph_dark.tres" id="1_treko"]
+[ext_resource type="Script" path="res://scripts/visuals/loss_graph/epoch_metric_graph_panel.gd" id="2_o6oof"]
+[ext_resource type="Script" path="res://scripts/visuals/loss_graph/grid_layer.gd" id="3_0lflx"]
+[ext_resource type="Script" path="res://scripts/visuals/loss_graph/epoch_metric_graph.gd" id="4_0aj26"]
 
 [node name="LossGraphPanel" type="PanelContainer" node_paths=PackedStringArray("graph_node", "title_label", "metric_value_label", "epoch_value_label")]
 anchors_preset = 15

@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cbu156ksxwtfe"]
 
-[ext_resource type="Script" uid="uid://d4kkjsoi13jy5" path="res://examples/visual_training/classification_demo.gd" id="1_pwrna"]
+[ext_resource type="Script" uid="uid://cxwdgip6pyj3k" path="res://examples/visual_training/classification_demo.gd" id="1_pwrna"]
 
 [node name="Plot" type="GridContainer" node_paths=PackedStringArray("boundary_plot", "loss_plot", "lr_plot", "accuracy_plot")]
 anchors_preset = 15

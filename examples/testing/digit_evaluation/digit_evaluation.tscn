@@ -1,0 +1,167 @@
+[gd_scene load_steps=2 format=3 uid="uid://m3wx2h3o38la"]
+
+[ext_resource type="Script" path="res://examples/testing/digit_evaluation/digit_evaluation.gd" id="1_fy523"]
+
+[node name="DigitEvaluationDashboard" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_fy523")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBox"]
+layout_mode = 2
+text = "MNIST Digit Classifier Evaluation"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 24
+
+[node name="StatusLabel" type="RichTextLabel" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+text = "[color=silver]Idle[/color]"
+
+[node name="SummaryPanel" type="PanelContainer" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SummaryMargin" type="MarginContainer" parent="MarginContainer/VBox/SummaryPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="SummaryVBox" type="VBoxContainer" parent="MarginContainer/VBox/SummaryPanel/SummaryMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="SummaryTitle" type="Label" parent="MarginContainer/VBox/SummaryPanel/SummaryMargin/SummaryVBox"]
+layout_mode = 2
+text = "Key Metrics"
+theme_override_font_sizes/font_size = 18
+
+[node name="AccuracyRow" type="HBoxContainer" parent="MarginContainer/VBox/SummaryPanel/SummaryMargin/SummaryVBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="AccuracyLabel" type="Label" parent="MarginContainer/VBox/SummaryPanel/SummaryMargin/SummaryVBox/AccuracyRow"]
+layout_mode = 2
+text = "Overall accuracy:"
+
+[node name="AccuracyValue" type="Label" parent="MarginContainer/VBox/SummaryPanel/SummaryMargin/SummaryVBox/AccuracyRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "—"
+theme_override_font_sizes/font_size = 20
+
+[node name="DatasetSummary" type="RichTextLabel" parent="MarginContainer/VBox/SummaryPanel/SummaryMargin/SummaryVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+scroll_active = false
+
+[node name="PerClassPanel" type="PanelContainer" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PerClassMargin" type="MarginContainer" parent="MarginContainer/VBox/PerClassPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="PerClassVBox" type="VBoxContainer" parent="MarginContainer/VBox/PerClassPanel/PerClassMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PerClassTitle" type="Label" parent="MarginContainer/VBox/PerClassPanel/PerClassMargin/PerClassVBox"]
+layout_mode = 2
+text = "Per-Class Performance"
+theme_override_font_sizes/font_size = 18
+
+[node name="PerClassMetrics" type="RichTextLabel" parent="MarginContainer/VBox/PerClassPanel/PerClassMargin/PerClassVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+scroll_active = false
+
+[node name="ConfusionPanel" type="PanelContainer" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ConfusionMargin" type="MarginContainer" parent="MarginContainer/VBox/ConfusionPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="ConfusionVBox" type="VBoxContainer" parent="MarginContainer/VBox/ConfusionPanel/ConfusionMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ConfusionTitle" type="Label" parent="MarginContainer/VBox/ConfusionPanel/ConfusionMargin/ConfusionVBox"]
+layout_mode = 2
+text = "Confusion Matrix"
+theme_override_font_sizes/font_size = 18
+
+[node name="ConfusionMatrix" type="RichTextLabel" parent="MarginContainer/VBox/ConfusionPanel/ConfusionMargin/ConfusionVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+bbcode_enabled = true
+scroll_active = false
+
+[node name="ErrorPanel" type="PanelContainer" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="ErrorMargin" type="MarginContainer" parent="MarginContainer/VBox/ErrorPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="ErrorVBox" type="VBoxContainer" parent="MarginContainer/VBox/ErrorPanel/ErrorMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ErrorTitle" type="Label" parent="MarginContainer/VBox/ErrorPanel/ErrorMargin/ErrorVBox"]
+layout_mode = 2
+text = "Misclassification Analysis"
+theme_override_font_sizes/font_size = 18
+
+[node name="ErrorSummary" type="RichTextLabel" parent="MarginContainer/VBox/ErrorPanel/ErrorMargin/ErrorVBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_active = false
+
+[node name="RefreshButton" type="Button" parent="MarginContainer/VBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Re-run Evaluation"
+

@@ -13,3 +13,4 @@
 *.uid
 .editorconfig
 .vscode/
+.DS_Store

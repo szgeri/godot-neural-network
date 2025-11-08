@@ -16,6 +16,8 @@ var training_thread: Thread
 @export_category("Data")
 @export_global_dir var training_data_dir: String
 @export_range(0.0, 1.0) var image_scale: float = 0.25
+@export var input_width: int = 32
+@export var input_height: int = 32
 @export_range(0.0, 1.0) var input_size_ratio: float = 1.0
 @export var category_size: int = 900
 
@@ -58,14 +60,17 @@ var training_inputs: Array[PackedFloat32Array] = []
 var training_targets: Array[PackedFloat32Array] = []
 
 var loss_panel: EpochMetricGraphPanel
+var expected_input_vector_size: int = 0
 
 # -------------------------------------------------------------------
 # Lifecycle
 # -------------------------------------------------------------------
 
 func _ready() -> void:
+	expected_input_vector_size = max(1, input_width * input_height)
 	_init_empty_datasets()
 	_process_inputs_targets()
+	_synchronize_network_input_size()
 
 	loss_panel = EpochMetricGraphPanel.new_panel()
 	add_child(loss_panel)
@@ -97,13 +102,19 @@ func _process_inputs_targets() -> void:
 		int(category_size * input_size_ratio)
 	)
 
+	_update_expected_input_vector_size()
+
 # -------------------------------------------------------------------
 # Utility Visualization
 # -------------------------------------------------------------------
 
-## Shows an input vector as a 32×32 image in the UI  
+## Shows an input vector as an image in the UI
 func show_input_as_image(data: PackedFloat32Array) -> void:
-	var image: Image = ImageUtils.image_from_f32_array(data, 32, 32)
+	var image: Image = ImageUtils.image_from_f32_array(
+		data,
+		max(1, input_width),
+		max(1, input_height)
+	)
 	var texture: Texture = ImageTexture.create_from_image(image)
 	$TextureRect.texture = texture
 
@@ -208,6 +219,36 @@ func _on_training_complete() -> void:
 	training_thread.wait_to_finish()
 
 # -------------------------------------------------------------------
+# Network Helpers
+# -------------------------------------------------------------------
+
+func _update_expected_input_vector_size() -> void:
+	if training_inputs.is_empty():
+		return
+
+	var detected_size: int = training_inputs[0].size()
+	if detected_size == expected_input_vector_size:
+		return
+
+	expected_input_vector_size = detected_size
+
+	var configured_size: int = max(1, input_width * input_height)
+	if configured_size != detected_size:
+		var side: int = int(round(sqrt(detected_size)))
+		if side * side == detected_size:
+			input_width = side
+			input_height = side
+
+func _synchronize_network_input_size() -> void:
+	if expected_input_vector_size <= 0:
+		return
+
+	if layer_sizes.is_empty():
+		layer_sizes.append(expected_input_vector_size)
+	elif layer_sizes[0] != expected_input_vector_size:
+		layer_sizes[0] = expected_input_vector_size
+
+# -------------------------------------------------------------------
 # Data Helpers
 # -------------------------------------------------------------------
 
@@ -226,11 +267,26 @@ func concatenate_data(
 func training_data_to_dic(path: String) -> Dictionary[int, Array]:
 	var results: Dictionary[int, Array] = {}
 	var dirs: PackedStringArray = FileUtils.list_dirs(path)
+	dirs.sort()
 
-	for i: int in range(dirs.size()):
-		results[i] = ImageUtils.read_images(dirs[i], image_scale)
-		var usable_size: int = int(results[i].size() * input_size_ratio)
-		results[i].resize(usable_size)
+	for dir_path: String in dirs:
+		var label: String = dir_path.get_file()
+		var key: int = results.size()
+		if label.is_valid_int():
+			key = label.to_int()
+
+		var images: Array[PackedFloat32Array] = ImageUtils.read_images(
+			dir_path,
+			image_scale
+		)
+		var max_per_class: int = min(images.size(), category_size)
+		var usable_size: int = clamp(
+			int(round(max_per_class * input_size_ratio)),
+			0,
+			images.size()
+		)
+		images.resize(usable_size)
+		results[key] = images
 
 	return results
 

@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://bxw4j6m8k3hn7"]
+
+[ext_resource type="Script" uid="uid://tvvysuv2jdvh" path="res://examples/mnist_demo_ui.gd" id="1_demo_ui"]
+
+[node name="MNISTDemoUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_demo_ui")

@@ -47,6 +47,106 @@ static func evaluate_model_soft_max(
 
 	return float(correct) / float(predictions.size())
 
+
+# -------------------------------------------------------------------
+# Confusion matrix and detailed metrics
+# -------------------------------------------------------------------
+
+## Computes confusion matrix and detailed classification statistics.
+## WHY: Provides granular insight into class-level performance for debugging.
+##
+## Returns Dictionary with:
+##   - "matrix": Array[PackedInt32Array] confusion matrix (rows = actual, cols = predicted)
+##   - "per_class_totals": PackedInt32Array with total samples per class
+##   - "per_class_correct": PackedInt32Array with correctly classified samples per class
+##   - "predicted_indices": PackedInt32Array with model predictions per sample
+##   - "target_indices": PackedInt32Array with ground-truth indices per sample
+##   - "misclassified": Array[Dictionary] with entries:
+##         { "index", "target", "prediction", "confidence", "probabilities" }
+static func compute_confusion_details(
+	network: NeuralNetwork,
+	inputs: Array[PackedFloat32Array],
+	targets: Array[PackedFloat32Array]
+) -> Dictionary:
+	var results: Dictionary = {
+		"matrix": [],
+		"per_class_totals": PackedInt32Array(),
+		"per_class_correct": PackedInt32Array(),
+		"predicted_indices": PackedInt32Array(),
+		"target_indices": PackedInt32Array(),
+		"misclassified": []
+	}
+
+	if inputs.is_empty() or targets.is_empty():
+		return results
+
+	var num_classes: int = targets[0].size()
+	if num_classes <= 0:
+		return results
+
+	var predictions_flat: PackedFloat32Array = network.forward_pass(inputs)
+	var predictions: Array[PackedFloat32Array] = TensorUtils.unflatten_batch(
+		predictions_flat,
+		num_classes
+	)
+
+	var confusion_matrix: Array[PackedInt32Array] = []
+	var per_class_totals: PackedInt32Array = PackedInt32Array()
+	var per_class_correct: PackedInt32Array = PackedInt32Array()
+	var predicted_indices: PackedInt32Array = PackedInt32Array()
+	var target_indices: PackedInt32Array = PackedInt32Array()
+	var misclassified: Array[Dictionary] = []
+
+	per_class_totals.resize(num_classes)
+	per_class_totals.fill(0)
+	per_class_correct.resize(num_classes)
+	per_class_correct.fill(0)
+
+	predicted_indices.resize(predictions.size())
+	target_indices.resize(predictions.size())
+
+	for _i: int in range(num_classes):
+		var row: PackedInt32Array = PackedInt32Array()
+		row.resize(num_classes)
+		row.fill(0)
+		confusion_matrix.append(row)
+
+	for sample_idx: int in range(predictions.size()):
+		var pred_vec: PackedFloat32Array = predictions[sample_idx]
+		var target_vec: PackedFloat32Array = targets[sample_idx]
+
+		var predicted_idx: int = find_max_value_index(pred_vec)
+		var target_idx: int = find_max_value_index(target_vec)
+
+		if predicted_idx == -1 or target_idx == -1:
+			continue
+
+		predicted_indices[sample_idx] = predicted_idx
+		target_indices[sample_idx] = target_idx
+
+		confusion_matrix[target_idx][predicted_idx] += 1
+		per_class_totals[target_idx] += 1
+
+		if predicted_idx == target_idx:
+			per_class_correct[target_idx] += 1
+		else:
+			misclassified.append({
+				"index": sample_idx,
+				"target": target_idx,
+				"prediction": predicted_idx,
+				"confidence": pred_vec[predicted_idx],
+				"probabilities": pred_vec
+			})
+
+	results["matrix"] = confusion_matrix
+	results["per_class_totals"] = per_class_totals
+	results["per_class_correct"] = per_class_correct
+	results["predicted_indices"] = predicted_indices
+	results["target_indices"] = target_indices
+	results["misclassified"] = misclassified
+
+	return results
+
 # -------------------------------------------------------------------
 # Binary classification evaluation
 # -------------------------------------------------------------------

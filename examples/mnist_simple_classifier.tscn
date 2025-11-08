@@ -1,0 +1,10 @@
+[gd_scene load_steps=2 format=3 uid="uid://c6h8vj0qbkr7q"]
+
+[ext_resource type="Script" path="res://examples/mnist_simple_classifier.gd" id="1_mnist_classifier"]
+
+[node name="MNISTSimpleClassifier" type="Node"]
+script = ExtResource("1_mnist_classifier")
+pretrained_model_path = "res://assets/models/digit_recognition.tres"
+use_pretrained_model = true
+test_image_path = ""
+

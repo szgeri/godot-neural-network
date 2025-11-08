@@ -24,12 +24,22 @@ static func unflatten_batch(
 	vector_size: int
 ) -> Array[PackedFloat32Array]:
 	var batch: Array[PackedFloat32Array] = []
-	var total_vectors: int = flat.size() / vector_size
 
-	for i: int in range(total_vectors):
+	if vector_size <= 0:
+		push_error("unflatten_batch: vector_size must be positive")
+		return batch
+
+	if flat.size() % vector_size != 0:
+		push_error(
+			"unflatten_batch: flat size %d is not divisible by vector_size %d"
+			% [flat.size(), vector_size]
+		)
+		return batch
+
+	for start_index: int in range(0, flat.size(), vector_size):
 		var vector: PackedFloat32Array = PackedFloat32Array()
 		for j: int in range(vector_size):
-			vector.append(flat[i * vector_size + j])
+			vector.append(flat[start_index + j])
 		batch.append(vector)
 
 	return batch
@@ -42,28 +52,33 @@ static func unflatten_batch(
 ## WHY: Reads binary shader outputs back into GDScript-friendly floats.
 static func bytes_to_floats(bytes: PackedByteArray) -> PackedFloat32Array:
 	var floats: PackedFloat32Array = PackedFloat32Array()
-	var total_floats: int = bytes.size() / 4
-	for i: int in range(total_floats):
-		floats.append(bytes.decode_float(i * 4))
+	if bytes.size() % 4 != 0:
+		push_error("bytes_to_floats: byte array size %d not divisible by 4" % bytes.size())
+		return floats
+	for i: int in range(0, bytes.size(), 4):
+		floats.append(bytes.decode_float(i))
 	return floats
 
 ## Decodes bytes to int32 array.
 ## WHY: For integer-coded tensor data from shaders.
 static func bytes_to_ints(bytes: PackedByteArray) -> PackedInt32Array:
 	var ints: PackedInt32Array = PackedInt32Array()
-	var total_ints: int = bytes.size() / 4
-	for i: int in range(total_ints):
-		ints.append(bytes.decode_s32(i * 4))
+	if bytes.size() % 4 != 0:
+		push_error("bytes_to_ints: byte array size %d not divisible by 4" % bytes.size())
+		return ints
+	for i: int in range(0, bytes.size(), 4):
+		ints.append(bytes.decode_s32(i))
 	return ints
 
 ## Decodes bytes holding uint bit patterns into floats.
 ## WHY: Needed when GPU atomics store float bits via uint encoding.
 static func uint_bytes_to_floats(bytes: PackedByteArray) -> PackedFloat32Array:
 	var floats: PackedFloat32Array = PackedFloat32Array()
-	var total_values: int = bytes.size() / 4
-
-	for i: int in range(total_values):
-		var bits: int = bytes.decode_u32(i * 4)
+	if bytes.size() % 4 != 0:
+		push_error("uint_bytes_to_floats: byte array size %d not divisible by 4" % bytes.size())
+		return floats
+	for i: int in range(0, bytes.size(), 4):
+		var bits: int = bytes.decode_u32(i)
 		floats.append(float_from_bits(bits))
 
 	return floats
