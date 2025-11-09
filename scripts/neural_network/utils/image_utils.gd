@@ -12,12 +12,8 @@ extends RefCounted
 #   PackedFloat32Array: Flattened grayscale pixel values.
 static func read_image(path: String, scale: float, invert: bool = false) -> PackedFloat32Array:
 	var result: PackedFloat32Array = []
-	var image_path: String = path
-	if path.begins_with("res://") or path.begins_with("user://"):
-		image_path = ProjectSettings.globalize_path(path)
-
 	var image: Image = Image.new()
-	if image.load(image_path) != OK:
+	if image.load(path) != OK:
 		push_error("Failed to load image: %s" % path)
 		return result
 
@@ -30,10 +26,11 @@ static func read_image(path: String, scale: float, invert: bool = false) -> Pack
 		for x: int in range(width):
 			var color: Color = image.get_pixel(x, y)
 			var value: float = color.r * 0.299 + color.g * 0.587 + color.b * 0.114
-			if invert:
-				value = 1.0 - value
 			var scaled_value: float = (value - 0.5) * 2.0
-			result.append(scaled_value)
+			if invert:
+				result.append(1.0 - scaled_value)
+			else:
+				result.append(scaled_value)
 	return result
 
 

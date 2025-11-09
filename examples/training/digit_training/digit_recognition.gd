@@ -15,33 +15,31 @@ var training_thread: Thread
 # -------------------------------------------------------------------
 @export_category("Data")
 @export_global_dir var training_data_dir: String
-@export_range(0.0, 1.0) var image_scale: float = 0.25
-@export var input_width: int = 32
-@export var input_height: int = 32
+@export_range(0.0, 1.0) var image_scale: float = 1.0
 @export_range(0.0, 1.0) var input_size_ratio: float = 1.0
-@export var category_size: int = 900
+@export var category_size: int = 6000
 
 # -------------------------------------------------------------------
 # Network Properties
 # -------------------------------------------------------------------
 @export_category("Network Properties")
-@export var layer_sizes: Array[int] = [32 * 32, 32, 16, 1]
-@export_file("*.tres") var export_path: String = "res://scripts/test_benchs/trained_neural_networks/digit_recognition.tres"
+@export var layer_sizes: Array[int] = [28 * 28, 128, 64, 10]
+@export_file("*.tres") var export_path: String = "res://assets/models/mnist_digit_classifier.tres"
 @export var export_network: bool = false
 
 # -------------------------------------------------------------------
 # Training Properties
 # -------------------------------------------------------------------
 @export_category("Training Properties")
-@export_range(0.000001, 10) var learning_rate: float = 0.6
+@export_range(0.000001, 10) var learning_rate: float = 0.1
 @export_range(0.000001, 1) var lambda_l2: float = 0.0001
-@export var loss: Loss.Type = Loss.Type.BCE
-@export_range(1, 1000) var epochs: int = 400
-@export_range(1, 1_000_000) var batch_size: int = 1024
+@export var loss: Loss.Type = Loss.Type.CCE
+@export_range(1, 1000) var epochs: int = 8
+@export_range(1, 1_000_000) var batch_size: int = 128
 @export_range(0.0, 1.0) var test_size_ratio: float = 0.2
 @export var weight_initialization: NetworkLayer.WeightInitialization = NetworkLayer.WeightInitialization.XAVIER
 @export var hidden_layers_activation: Activations.Type = Activations.Type.TANH
-@export var output_layer_activation: Activations.Type = Activations.Type.SIGMOID
+@export var output_layer_activation: Activations.Type = Activations.Type.SOFTMAX
 
 # -------------------------------------------------------------------
 # Optimizer Properties
@@ -60,17 +58,14 @@ var training_inputs: Array[PackedFloat32Array] = []
 var training_targets: Array[PackedFloat32Array] = []
 
 var loss_panel: EpochMetricGraphPanel
-var expected_input_vector_size: int = 0
 
 # -------------------------------------------------------------------
 # Lifecycle
 # -------------------------------------------------------------------
 
 func _ready() -> void:
-	expected_input_vector_size = max(1, input_width * input_height)
 	_init_empty_datasets()
 	_process_inputs_targets()
-	_synchronize_network_input_size()
 
 	loss_panel = EpochMetricGraphPanel.new_panel()
 	add_child(loss_panel)
@@ -93,28 +88,18 @@ func _process_inputs_targets() -> void:
 	training_inputs_dic = training_data_to_dic(training_data_dir)
 	training_targets_dic = generate_targets(training_inputs_dic)
 
-	training_inputs = concatenate_data(
-		training_inputs_dic,
-		int(category_size * input_size_ratio)
-	)
-	training_targets = concatenate_data(
-		training_targets_dic,
-		int(category_size * input_size_ratio)
-	)
-
-	_update_expected_input_vector_size()
+	training_inputs = concatenate_data(training_inputs_dic)
+	training_targets = concatenate_data(training_targets_dic)
+	
+	print("Data loaded: %d samples across %d classes" % [training_inputs.size(), training_inputs_dic.size()])
 
 # -------------------------------------------------------------------
 # Utility Visualization
 # -------------------------------------------------------------------
 
-## Shows an input vector as an image in the UI
+## Shows an input vector as a 28×28 image in the UI  
 func show_input_as_image(data: PackedFloat32Array) -> void:
-	var image: Image = ImageUtils.image_from_f32_array(
-		data,
-		max(1, input_width),
-		max(1, input_height)
-	)
+	var image: Image = ImageUtils.image_from_f32_array(data, 28, 28)
 	var texture: Texture = ImageTexture.create_from_image(image)
 	$TextureRect.texture = texture
 
@@ -172,14 +157,14 @@ func _run_training() -> void:
 			split.test_targets,
 			true
 		)
-		print_rich("[color=cyan]Test Accuracy: %4.2f" % test_acc)
+		print_rich("[color=cyan]Test Accuracy: %4.2f%%" % (test_acc * 100))
 
 		var training_acc: float = ModelEvaluator.evaluate_model_soft_max(
 			network,
 			split.train_inputs,
 			split.train_targets
 		)
-		print_rich("[color=cyan]Training Accuracy: %4.2f" % training_acc)
+		print_rich("[color=cyan]Training Accuracy: %4.2f%%" % (training_acc * 100))
 
 		if test_acc >= 0.9:
 			satisfied = true
@@ -219,48 +204,23 @@ func _on_training_complete() -> void:
 	training_thread.wait_to_finish()
 
 # -------------------------------------------------------------------
-# Network Helpers
-# -------------------------------------------------------------------
-
-func _update_expected_input_vector_size() -> void:
-	if training_inputs.is_empty():
-		return
-
-	var detected_size: int = training_inputs[0].size()
-	if detected_size == expected_input_vector_size:
-		return
-
-	expected_input_vector_size = detected_size
-
-	var configured_size: int = max(1, input_width * input_height)
-	if configured_size != detected_size:
-		var side: int = int(round(sqrt(detected_size)))
-		if side * side == detected_size:
-			input_width = side
-			input_height = side
-
-func _synchronize_network_input_size() -> void:
-	if expected_input_vector_size <= 0:
-		return
-
-	if layer_sizes.is_empty():
-		layer_sizes.append(expected_input_vector_size)
-	elif layer_sizes[0] != expected_input_vector_size:
-		layer_sizes[0] = expected_input_vector_size
-
-# -------------------------------------------------------------------
 # Data Helpers
 # -------------------------------------------------------------------
 
-## Merge per-category arrays into a single dataset
-func concatenate_data(
-	data: Dictionary[int, Array],
-	data_size: int
-) -> Array[PackedFloat32Array]:
+## Merge per-category arrays into a single dataset - uses ALL available images
+func concatenate_data(data: Dictionary[int, Array]) -> Array[PackedFloat32Array]:
 	var result: Array[PackedFloat32Array] = []
-	for i: int in range(data_size):
-		for key: int in data:
-			result.append(data[key][i])
+	if data.is_empty():
+		return result
+	
+	# Append all images from each class
+	var total: int = 0
+	for key: int in data:
+		result.append_array(data[key])
+		total += data[key].size()
+		print("  Class %d: %d images" % [key, data[key].size()])
+	
+	print("Total samples: %d (unbalanced dataset)" % total)
 	return result
 
 ## Read dataset from directories into category dictionary
@@ -269,24 +229,10 @@ func training_data_to_dic(path: String) -> Dictionary[int, Array]:
 	var dirs: PackedStringArray = FileUtils.list_dirs(path)
 	dirs.sort()
 
-	for dir_path: String in dirs:
-		var label: String = dir_path.get_file()
-		var key: int = results.size()
-		if label.is_valid_int():
-			key = label.to_int()
-
-		var images: Array[PackedFloat32Array] = ImageUtils.read_images(
-			dir_path,
-			image_scale
-		)
-		var max_per_class: int = min(images.size(), category_size)
-		var usable_size: int = clamp(
-			int(round(max_per_class * input_size_ratio)),
-			0,
-			images.size()
-		)
-		images.resize(usable_size)
-		results[key] = images
+	for i: int in range(dirs.size()):
+		var images: Array[PackedFloat32Array] = ImageUtils.read_images(dirs[i], image_scale)
+		print("Class %d: loaded %d images from %s" % [i, images.size(), dirs[i].get_file()])
+		results[i] = images
 
 	return results
 

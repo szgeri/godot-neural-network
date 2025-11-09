@@ -446,7 +446,7 @@ func _image_to_input_array(img: Image) -> PackedFloat32Array:
 			var color: Color = img.get_pixel(x, y)
 			# Convert to grayscale [0, 1]
 			var grayscale: float = color.r * 0.299 + color.g * 0.587 + color.b * 0.114
-			# Normalize to [-1, 1] range expected by the network
+			# Normalize to [-1, 1] range (matches training normalization)
 			var normalized: float = (grayscale - 0.5) * 2.0
 			result[y * MODEL_IMAGE_SIZE + x] = normalized
 	
