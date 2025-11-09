@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cun1ml6gj7f66"]
 
-[ext_resource type="Script" uid="uid://dfhb8njmk7q2b" path="res://examples/training/digit_training/digit_recognition.gd" id="1_scs5v"]
+[ext_resource type="Script" uid="uid://dwrqmlsly0bfh" path="res://examples/training/digit_training/digit_recognition.gd" id="1_scs5v"]
 
 [node name="TenDigitRecognition" type="Control"]
 layout_mode = 3
@@ -10,18 +10,4 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_scs5v")
-training_data_dir = "/Users/szgeri/mnist_png/training"
-image_scale = 1.0
-input_size_ratio = 1.0
-category_size = 6000
-layer_sizes = Array[int]([784, 128, 64, 10])
-export_path = "res://assets/models/mnist_digit_classifier.tres"
 export_network = true
-learning_rate = 0.1
-lambda_l2 = 0.0001
-loss = 2
-epochs = 8
-batch_size = 128
-weight_initialization = 1
-hidden_layers_activation = 2
-output_layer_activation = 5

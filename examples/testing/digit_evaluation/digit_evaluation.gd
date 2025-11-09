@@ -1,9 +1,10 @@
 extends Control
 class_name DigitEvaluationDashboard
 
-@export_file("*.tres") var model_path: String = "res://assets/models/mnist_digit_classifier.tres"
-@export_global_dir var training_data_dir: String = "/Users/szgeri/mnist_png/training"
-@export_global_dir var test_data_dir: String = "/Users/szgeri/mnist_png/testing"
+@export_category("Evaluation Settings")
+@export_file("*.tres") var model_path: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
+@export_global_dir var training_data_dir: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
+@export_global_dir var test_data_dir: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
 @export_range(0.0, 1.0) var image_scale: float = 1.0
 @export var limit_per_class: int = 0
 @export var show_training_metrics: bool = true
@@ -20,8 +21,43 @@ class_name DigitEvaluationDashboard
 
 
 func _ready() -> void:
+	_configure_paths()
+	
+	print("=======================================")
+	print("DIGIT EVALUATION DASHBOARD")
+	print("=======================================")
+	print("Dataset mode: %s" % GlobalConfig.get_dataset_name())
+	print("Model path: %s" % model_path)
+	print("Training data: %s" % training_data_dir)
+	print("Test data: %s" % test_data_dir)
+	
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	_run_evaluation()
+
+# -------------------------------------------------------------------
+# Path Configuration
+# -------------------------------------------------------------------
+func _configure_paths() -> void:
+	print("\n[PATH CONFIGURATION]")
+	print("GlobalConfig.full_emnist_digits = %s" % GlobalConfig.full_emnist_digits)
+	
+	if model_path == "":
+		model_path = GlobalConfig.get_model_path()
+		print("Using auto-configured model path: %s" % model_path)
+	else:
+		print("Using custom model path: %s" % model_path)
+	
+	if training_data_dir == "":
+		training_data_dir = GlobalConfig.get_training_data_dir()
+		print("Using auto-configured training path: %s" % training_data_dir)
+	else:
+		print("Using custom training path: %s" % training_data_dir)
+	
+	if test_data_dir == "":
+		test_data_dir = GlobalConfig.get_test_data_dir()
+		print("Using auto-configured test path: %s" % test_data_dir)
+	else:
+		print("Using custom test path: %s" % test_data_dir)
 
 
 func _on_refresh_pressed() -> void:

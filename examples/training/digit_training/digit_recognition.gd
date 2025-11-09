@@ -14,7 +14,7 @@ var training_thread: Thread
 # Data Properties
 # -------------------------------------------------------------------
 @export_category("Data")
-@export_global_dir var training_data_dir: String
+@export_global_dir var training_data_dir: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
 @export_range(0.0, 1.0) var image_scale: float = 1.0
 @export_range(0.0, 1.0) var input_size_ratio: float = 1.0
 @export var category_size: int = 6000
@@ -24,7 +24,7 @@ var training_thread: Thread
 # -------------------------------------------------------------------
 @export_category("Network Properties")
 @export var layer_sizes: Array[int] = [28 * 28, 128, 64, 10]
-@export_file("*.tres") var export_path: String = "res://assets/models/mnist_digit_classifier.tres"
+@export_file("*.tres") var export_path: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
 @export var export_network: bool = false
 
 # -------------------------------------------------------------------
@@ -34,7 +34,7 @@ var training_thread: Thread
 @export_range(0.000001, 10) var learning_rate: float = 0.1
 @export_range(0.000001, 1) var lambda_l2: float = 0.0001
 @export var loss: Loss.Type = Loss.Type.CCE
-@export_range(1, 1000) var epochs: int = 8
+@export_range(1, 1000) var epochs: int = 80
 @export_range(1, 1_000_000) var batch_size: int = 128
 @export_range(0.0, 1.0) var test_size_ratio: float = 0.2
 @export var weight_initialization: NetworkLayer.WeightInitialization = NetworkLayer.WeightInitialization.XAVIER
@@ -64,6 +64,15 @@ var loss_panel: EpochMetricGraphPanel
 # -------------------------------------------------------------------
 
 func _ready() -> void:
+	_configure_paths()
+	
+	print("=======================================")
+	print("DIGIT TRAINING")
+	print("=======================================")
+	print("Dataset mode: %s" % GlobalConfig.get_dataset_name())
+	print("Training data: %s" % training_data_dir)
+	print("Export path: %s" % export_path)
+	
 	_init_empty_datasets()
 	_process_inputs_targets()
 
@@ -72,6 +81,25 @@ func _ready() -> void:
 
 	training_thread = Thread.new()
 	training_thread.start(_run_training)
+
+# -------------------------------------------------------------------
+# Path Configuration
+# -------------------------------------------------------------------
+func _configure_paths() -> void:
+	print("\n[PATH CONFIGURATION]")
+	print("GlobalConfig.full_emnist_digits = %s" % GlobalConfig.full_emnist_digits)
+	
+	if training_data_dir == "":
+		training_data_dir = GlobalConfig.get_training_data_dir()
+		print("Using auto-configured training path: %s" % training_data_dir)
+	else:
+		print("Using custom training path: %s" % training_data_dir)
+	
+	if export_path == "":
+		export_path = GlobalConfig.get_model_path()
+		print("Using auto-configured model path: %s" % export_path)
+	else:
+		print("Using custom model path: %s" % export_path)
 
 # -------------------------------------------------------------------
 # Dataset Preparation
@@ -85,6 +113,10 @@ func _init_empty_datasets() -> void:
 
 ## Load and process dataset into final training arrays
 func _process_inputs_targets() -> void:
+	print("\n[DATA LOADING]")
+	print("Reading from directory: %s" % training_data_dir)
+	print("Directory exists: %s" % ("Yes" if DirAccess.dir_exists_absolute(training_data_dir) else "No"))
+	
 	training_inputs_dic = training_data_to_dic(training_data_dir)
 	training_targets_dic = generate_targets(training_inputs_dic)
 
@@ -92,6 +124,11 @@ func _process_inputs_targets() -> void:
 	training_targets = concatenate_data(training_targets_dic)
 	
 	print("Data loaded: %d samples across %d classes" % [training_inputs.size(), training_inputs_dic.size()])
+	
+	if training_inputs.is_empty():
+		push_error("NO DATA LOADED! Check the training directory path.")
+	else:
+		print("[SUCCESS] Training data loaded successfully")
 
 # -------------------------------------------------------------------
 # Utility Visualization

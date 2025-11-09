@@ -16,11 +16,11 @@ const IMAGE_HEIGHT: int = 28
 const INPUT_VECTOR_SIZE: int = IMAGE_WIDTH * IMAGE_HEIGHT
 
 @export_category("Model Settings")
-@export_file("*.tres") var pretrained_model_path: String = "res://assets/models/mnist_digit_classifier.tres"
+@export_file("*.tres") var pretrained_model_path: String = ""
 @export var use_pretrained_model: bool = true
 
 @export_category("Training Settings (if training from scratch)")
-@export_global_dir var training_data_dir: String = "/Users/szgeri/mnist_png/training"  # Should contain subdirectories: 0/, 1/, 2/, ..., 9/
+@export_global_dir var training_data_dir: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
 @export var layer_sizes: Array[int] = [INPUT_VECTOR_SIZE, 256, 128, 10]  # 28x28 images = 784 input neurons
 @export_range(0.0, 1.0) var image_scale: float = 1.0  # Use 1.0 for 28x28 images
 @export_range(1, 1000) var epochs: int = 100
@@ -47,9 +47,14 @@ var digit_labels: Array[String] = [
 # Lifecycle
 # -------------------------------------------------------------------
 func _ready() -> void:
+	_configure_paths()
+	
 	print("=======================================")
 	print("MNIST DIGIT CLASSIFIER - Simple Example")
 	print("=======================================")
+	print("Dataset mode: %s" % GlobalConfig.get_dataset_name())
+	print("Model path: %s" % pretrained_model_path)
+	print("Training data: %s" % training_data_dir)
 	
 	# Initialize GPU runner
 	forward_runner = ForwardPassRunner.new()
@@ -64,6 +69,25 @@ func _ready() -> void:
 	# Test the model with a single image
 	if test_image_path != "":
 		classify_digit_image(test_image_path)
+
+# -------------------------------------------------------------------
+# Path Configuration
+# -------------------------------------------------------------------
+func _configure_paths() -> void:
+	print("\n[PATH CONFIGURATION]")
+	print("GlobalConfig.full_emnist_digits = %s" % GlobalConfig.full_emnist_digits)
+	
+	if pretrained_model_path == "":
+		pretrained_model_path = GlobalConfig.get_model_path()
+		print("Using auto-configured model path: %s" % pretrained_model_path)
+	else:
+		print("Using custom model path: %s" % pretrained_model_path)
+	
+	if training_data_dir == "":
+		training_data_dir = GlobalConfig.get_training_data_dir()
+		print("Using auto-configured training path: %s" % training_data_dir)
+	else:
+		print("Using custom training path: %s" % training_data_dir)
 
 # -------------------------------------------------------------------
 # Model Loading

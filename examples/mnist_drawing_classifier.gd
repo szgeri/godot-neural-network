@@ -47,6 +47,12 @@ var classifier: MNISTSimpleClassifier
 # Lifecycle
 # -------------------------------------------------------------------
 func _ready() -> void:
+	print("=======================================")
+	print("MNIST DRAWING CLASSIFIER")
+	print("=======================================")
+	print("Dataset mode: %s" % GlobalConfig.get_dataset_name())
+	print("Model path: %s" % GlobalConfig.get_model_path())
+	
 	_create_ui()
 	_initialize_canvas()
 	_initialize_classifier()
@@ -208,7 +214,7 @@ func _initialize_canvas() -> void:
 # -------------------------------------------------------------------
 func _initialize_classifier() -> void:
 	classifier = MNISTSimpleClassifier.new()
-	classifier.pretrained_model_path = "res://assets/models/mnist_digit_classifier.tres"
+	classifier.pretrained_model_path = GlobalConfig.get_model_path()
 	classifier.use_pretrained_model = true
 	classifier.test_image_path = ""
 	classifier.image_scale = 1.0  # We'll provide 28x28 images

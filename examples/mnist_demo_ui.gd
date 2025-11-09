@@ -16,6 +16,12 @@ var classifier: MNISTSimpleClassifier
 var current_image_path: String = ""
 
 func _ready() -> void:
+	print("=======================================")
+	print("MNIST DEMO UI")
+	print("=======================================")
+	print("Dataset mode: %s" % GlobalConfig.get_dataset_name())
+	print("Model path: %s" % GlobalConfig.get_model_path())
+	
 	_create_ui()
 	_initialize_classifier()
 
@@ -110,8 +116,7 @@ func _initialize_classifier() -> void:
 	classifier = MNISTSimpleClassifier.new()
 	add_child(classifier)
 	
-	# classifier.pretrained_model_path = "res://assets/models/digit_recognition.tres"
-	classifier.pretrained_model_path = "res://assets/models/mnist_digit_classifier.tres"
+	classifier.pretrained_model_path = GlobalConfig.get_model_path()
 	classifier.use_pretrained_model = true
 	classifier.test_image_path = ""
 	

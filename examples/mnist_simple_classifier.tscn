@@ -4,7 +4,6 @@
 
 [node name="MNISTSimpleClassifier" type="Node"]
 script = ExtResource("1_mnist_classifier")
-pretrained_model_path = "res://assets/models/digit_recognition.tres"
 use_pretrained_model = true
 test_image_path = ""
 
