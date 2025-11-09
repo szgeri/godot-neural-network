@@ -309,41 +309,8 @@ func _classify_drawing() -> void:
 		confidence_label.text = ""
 		return
 	
-	# Crop to bounding box with padding
-	var padding: int = 20
-	var crop_start_x: int = maxi(0, bounds.position.x - padding)
-	var crop_start_y: int = maxi(0, bounds.position.y - padding)
-	var crop_end_x: int = mini(canvas_size.x - 1, bounds.position.x + bounds.size.x + padding - 1)
-	var crop_end_y: int = mini(canvas_size.y - 1, bounds.position.y + bounds.size.y + padding - 1)
-	
-	var crop_width: int = crop_end_x - crop_start_x + 1
-	var crop_height: int = crop_end_y - crop_start_y + 1
-	var crop_rect: Rect2i = Rect2i(crop_start_x, crop_start_y, crop_width, crop_height)
-	
-	print("=== Image Processing Debug ===")
-	print("Bounding box: ", bounds)
-	print("Crop rect: ", crop_rect)
-	
-	var cropped: Image = _crop_image(drawn_image, crop_rect)
-	print("Cropped size: %d x %d" % [cropped.get_width(), cropped.get_height()])
-	
-	# Make it square by adding padding to shorter dimension
-	var square_image: Image = _make_square_with_padding(cropped)
-	print("Square size: %d x %d" % [square_image.get_width(), square_image.get_height()])
-	
-	# Resize to model input size
-	square_image.resize(
-		MODEL_IMAGE_SIZE,
-		MODEL_IMAGE_SIZE,
-		Image.INTERPOLATE_LANCZOS
-	)
-	print("Final size (canvas space): %d x %d" % [
-		square_image.get_width(),
-		square_image.get_height()
-	])
-	
-	# Prepare image for the neural network (invert so digits are light on dark)
-	var model_image: Image = _prepare_image_for_model(square_image)
+	# MNIST preprocessing: match the original MNIST preparation method
+	var model_image: Image = _preprocess_like_mnist(drawn_image, bounds)
 	
 	# Show preview (what the network sees)
 	var preview: Image = model_image.duplicate()
@@ -352,11 +319,6 @@ func _classify_drawing() -> void:
 	
 	# Convert to neural network input format
 	var input_data: PackedFloat32Array = _image_to_input_array(model_image)
-	print("Input data size: %d" % input_data.size())
-	print("Sample values: [%.3f, %.3f, %.3f, %.3f, %.3f]" % [
-		input_data[0], input_data[1], input_data[2], input_data[3], input_data[4]
-	])
-	print("=======================\n")
 	
 	# Classify
 	var result: Dictionary = classifier.classify_from_data(input_data)
@@ -403,39 +365,68 @@ func _crop_image(img: Image, rect: Rect2i) -> Image:
 	
 	return cropped
 
-func _make_square_with_padding(img: Image) -> Image:
-	var width: int = img.get_width()
-	var height: int = img.get_height()
-	var square_size: int = maxi(width, height)
+func _preprocess_like_mnist(img: Image, bounds: Rect2i) -> Image:
+	# Step 1: Crop to bounding box
+	var cropped: Image = _crop_image(img, bounds)
 	
-	var square: Image = Image.create(square_size, square_size, false, Image.FORMAT_RGBA8)
-	square.fill(Color(1, 1, 1, 1))  # White padding to match canvas background
+	# Step 2: Resize to fit in 20x20 while preserving aspect ratio
+	var width: int = cropped.get_width()
+	var height: int = cropped.get_height()
+	var max_dim: int = maxi(width, height)
+	var scale: float = 20.0 / float(max_dim)
+	var new_width: int = int(width * scale)
+	var new_height: int = int(height * scale)
 	
-	var offset_x: int = (square_size - width) / 2
-	var offset_y: int = (square_size - height) / 2
+	cropped.resize(new_width, new_height, Image.INTERPOLATE_LANCZOS)
 	
-	for y in range(height):
-		for x in range(width):
-			square.set_pixel(offset_x + x, offset_y + y, img.get_pixel(x, y))
-	
-	return square
-
-func _prepare_image_for_model(img: Image) -> Image:
-	var prepared: Image = Image.create(
-		img.get_width(),
-		img.get_height(),
-		false,
-		Image.FORMAT_RGBA8
-	)
-
-	for y: int in range(img.get_height()):
-		for x: int in range(img.get_width()):
-			var color: Color = img.get_pixel(x, y)
+	# Step 3: Invert colors (drawing is dark on white, MNIST is white on black)
+	var inverted: Image = Image.create(new_width, new_height, false, Image.FORMAT_RGBA8)
+	for y in range(new_height):
+		for x in range(new_width):
+			var color: Color = cropped.get_pixel(x, y)
 			var grayscale: float = color.r * 0.299 + color.g * 0.587 + color.b * 0.114
-			var inverted: float = 1.0 - grayscale
-			prepared.set_pixel(x, y, Color(inverted, inverted, inverted, 1.0))
+			var inv: float = 1.0 - grayscale
+			inverted.set_pixel(x, y, Color(inv, inv, inv, 1.0))
+	
+	# Step 4: Calculate center of mass
+	var com: Vector2 = _calculate_center_of_mass(inverted)
+	
+	# Step 5: Place in 28x28 canvas, centered by center of mass
+	var final_image: Image = Image.create(28, 28, false, Image.FORMAT_RGBA8)
+	final_image.fill(Color(0, 0, 0, 1))  # Black background (MNIST style)
+	
+	# Calculate offset to center the center of mass at (14, 14)
+	var offset_x: int = int(14.0 - com.x)
+	var offset_y: int = int(14.0 - com.y)
+	
+	# Copy the resized image into the final canvas
+	for y in range(new_height):
+		for x in range(new_width):
+			var dest_x: int = x + offset_x
+			var dest_y: int = y + offset_y
+			if dest_x >= 0 and dest_x < 28 and dest_y >= 0 and dest_y < 28:
+				final_image.set_pixel(dest_x, dest_y, inverted.get_pixel(x, y))
+	
+	return final_image
 
-	return prepared
+func _calculate_center_of_mass(img: Image) -> Vector2:
+	var total_mass: float = 0.0
+	var sum_x: float = 0.0
+	var sum_y: float = 0.0
+	
+	for y in range(img.get_height()):
+		for x in range(img.get_width()):
+			var color: Color = img.get_pixel(x, y)
+			var intensity: float = color.r  # Already grayscale
+			total_mass += intensity
+			sum_x += float(x) * intensity
+			sum_y += float(y) * intensity
+	
+	if total_mass == 0.0:
+		return Vector2(img.get_width() / 2.0, img.get_height() / 2.0)
+	
+	return Vector2(sum_x / total_mass, sum_y / total_mass)
+
 
 func _image_to_input_array(img: Image) -> PackedFloat32Array:
 	var result: PackedFloat32Array = PackedFloat32Array()
