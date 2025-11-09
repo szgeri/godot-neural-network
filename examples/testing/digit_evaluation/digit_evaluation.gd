@@ -8,7 +8,7 @@ class_name DigitEvaluationDashboard
 @export var limit_per_class: int = 0
 @export var show_training_metrics: bool = true
 @export var max_misclassifications_to_display: int = 8
-@export var invert_images: bool = true
+@export var invert_images: bool = false  # MNIST images are already white on black
 
 @onready var status_label: RichTextLabel = $MarginContainer/VBox/StatusLabel
 @onready var accuracy_label: Label = $MarginContainer/VBox/SummaryPanel/SummaryMargin/SummaryVBox/AccuracyRow/AccuracyValue
