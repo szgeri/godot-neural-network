@@ -25,16 +25,17 @@ var training_thread: Thread
 @export_category("Network Properties")
 @export var layer_sizes: Array[int] = [28 * 28, 128, 64, 10]
 @export_file("*.tres") var export_path: String = ""  # Auto-configured based on GlobalConfig.full_emnist_digits
-@export var export_network: bool = false
+@export var export_network: bool = true
+@export var save_every_n_epochs: int = 5  # Save checkpoint every N epochs (0 = only at end)
 
 # -------------------------------------------------------------------
 # Training Properties
 # -------------------------------------------------------------------
 @export_category("Training Properties")
-@export_range(0.000001, 10) var learning_rate: float = 0.1
+@export_range(0.000001, 10) var learning_rate: float = 0.01
 @export_range(0.000001, 1) var lambda_l2: float = 0.0001
 @export var loss: Loss.Type = Loss.Type.CCE
-@export_range(1, 1000) var epochs: int = 80
+@export_range(1, 1000) var epochs: int = 200
 @export_range(1, 1_000_000) var batch_size: int = 128
 @export_range(0.0, 1.0) var test_size_ratio: float = 0.2
 @export var weight_initialization: NetworkLayer.WeightInitialization = NetworkLayer.WeightInitialization.XAVIER
@@ -58,6 +59,7 @@ var training_inputs: Array[PackedFloat32Array] = []
 var training_targets: Array[PackedFloat32Array] = []
 
 var loss_panel: EpochMetricGraphPanel
+var network: NeuralNetwork  # Stored for checkpoint saving
 
 # -------------------------------------------------------------------
 # Lifecycle
@@ -153,7 +155,7 @@ func _run_training() -> void:
 		ConfigKeys.SHADERS_PATHS.BACKWARD_PASS
 	)
 
-	var network: NeuralNetwork = _create_network(forward_runner)
+	network = _create_network(forward_runner)
 	var split: DataSplit = DataSetUtils.train_test_split(
 		training_inputs,
 		training_targets,
@@ -214,6 +216,17 @@ func _run_training() -> void:
 # Called upon finshing each epoch
 func on_epoch_finished(loss_value: float, epoch: int) -> void:
 	loss_panel.call_deferred("add_metric", loss_value, epoch)
+	
+	# Save checkpoint if enabled
+	if export_network and save_every_n_epochs > 0 and epoch % save_every_n_epochs == 0:
+		_save_checkpoint(epoch)
+
+## Save network checkpoint (overwrites the same file)
+func _save_checkpoint(epoch: int) -> void:
+	if network == null or export_path.is_empty():
+		return
+	NeuralNetworkSerializer.export(network, export_path)
+	print("[Checkpoint] Saved at epoch %d: %s" % [epoch, export_path])
 
 ## Construct network with configured layers and activations
 func _create_network(shader_runner: ForwardPassRunner) -> NeuralNetwork:

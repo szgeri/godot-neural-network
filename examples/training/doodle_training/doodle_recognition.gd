@@ -26,7 +26,8 @@ var training_thread: Thread
 @export_category("Network Properties")
 @export var layer_sizes: Array[int] = [64 * 64, 32, 16, 1]
 @export_file("*.tres") var export_path: String = "res://scripts/test_benchs/trained_neural_networks/digit_recognition.tres"
-@export var export_network: bool = false
+@export var export_network: bool = true
+@export var save_every_n_epochs: int = 5  # Save checkpoint every N epochs (0 = only at end)
 
 # -------------------------------------------------------------------
 # Training Properties
@@ -122,7 +123,7 @@ func _run_training() -> void:
 		ConfigKeys.SHADERS_PATHS.BACKWARD_PASS
 	)
 
-	var network: NeuralNetwork = _create_network(forward_runner)
+	network = _create_network(forward_runner)
 	var split: DataSplit = DataSetUtils.train_test_split(
 		training_inputs,
 		training_targets,
@@ -189,6 +190,17 @@ func _run_training() -> void:
 # Called upon finshing each epoch
 func on_epoch_finished(loss_value: float, epoch: int) -> void:
 	loss_panel.call_deferred("add_metric", loss_value, epoch)
+	
+	# Save checkpoint if enabled
+	if export_network and save_every_n_epochs > 0 and epoch % save_every_n_epochs == 0:
+		_save_checkpoint(epoch)
+
+## Save network checkpoint (overwrites the same file)
+func _save_checkpoint(epoch: int) -> void:
+	if network == null or export_path.is_empty():
+		return
+	NeuralNetworkSerializer.export(network, export_path)
+	print("[Checkpoint] Saved at epoch %d: %s" % [epoch, export_path])
 
 ## Construct network with configured layers and activations
 func _create_network(shader_runner: ForwardPassRunner) -> NeuralNetwork:

@@ -122,9 +122,9 @@ void main() {
     uint sample_idx = global_id / neurons_first_layer;
     uint neuron_idx = global_id % neurons_first_layer;
 
-    if (sample_idx >= batch) {
-        return;
-    }
+    // IMPORTANT: Do NOT return early! All threads must reach barriers.
+    // Use a flag to control whether this thread does actual work.
+    bool is_active = (sample_idx < batch);
 
     for (uint layer_idx = 0u; layer_idx < layer_count; ++layer_idx) {
         uint in_size  = input_sizes[layer_idx];
@@ -133,7 +133,8 @@ void main() {
         uint b_off = bias_offsets[layer_idx];
         uint out_off_layer = interm_offsets[layer_idx];
 
-        if (neuron_idx < out_size) {
+        // Only active threads with valid neuron index do work
+        if (is_active && neuron_idx < out_size) {
             float sum = biases[b_off + neuron_idx];
             for (uint i = 0u; i < in_size; ++i){
                 float in_val;
@@ -150,7 +151,7 @@ void main() {
             // write pre-activation (z)
             pre_acts[out_off_layer + sample_idx * out_size + neuron_idx] = sum;
 
-            // for everything but softmax apply immediatly
+            // for everything but softmax apply immediately
             if (activation_types[layer_idx] != ACT_SOFTMAX){
                 float activated = apply_activation(sum, layer_idx);
                 intermediates[out_off_layer + sample_idx * out_size + neuron_idx] = activated;
@@ -158,16 +159,21 @@ void main() {
                 // Store raw logits for softmax later
                 intermediates[out_off_layer + sample_idx * out_size + neuron_idx] = sum;
             }
-           
         }
+
+        // ALL threads must hit this barrier - ensures all logits are written
+        barrier();
 
         // === softmax stage ===
         if (activation_types[layer_idx] == ACT_SOFTMAX) {
-            // let only one thread per sample handle normalization
-            if (neuron_idx == 0u) {
+            // Only one thread per sample handles normalization
+            if (is_active && neuron_idx == 0u) {
                 softmax_layer(sample_idx, out_size, out_off_layer);
             }
         }
+
+        // ALL threads must hit this barrier - ensures softmax completes before next layer
+        barrier();
 
         neurons_first_layer = out_size;
         neuron_idx = global_id % neurons_first_layer;
